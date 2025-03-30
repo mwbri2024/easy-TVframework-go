@@ -1,10 +1,17 @@
 package utils
 
 import (
+	"bytes"
+	"crypto/md5"
 	"easy-itv/config"
+	"encoding/base64"
+	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
+	"net/url"
 	"regexp"
 	"strings"
 	"time"
