@@ -106,3 +106,84 @@ func DefaultQuery(r *http.Request, name string, defaultValue string) string {
 	}
 	return param
 }
+
+// sendHttpRequest 发送 HTTP 请求
+func SendHttpRequest(requestUrl, method string, requestBody interface{}, requestHeader map[string]string, debugMode bool, isFormUrlEncoded bool) (int, string, error) {
+	client := &http.Client{Timeout: 30 * time.Second}
+
+	var reqBody io.Reader
+	if requestBody != nil {
+		if isFormUrlEncoded {
+			// 处理 x-www-form-urlencoded
+			data := url.Values{}
+			if bodyMap, ok := requestBody.(map[string]string); ok {
+				for key, value := range bodyMap {
+					data.Set(key, value)
+				}
+			}
+			reqBody = strings.NewReader(data.Encode())
+		} else {
+			// 默认 JSON 处理
+			jsonData, err := json.Marshal(requestBody)
+			if err != nil {
+				return 0, "", err
+			}
+			reqBody = bytes.NewBuffer([]byte(jsonData))
+		}
+	}
+
+	// 创建请求
+	req, err := http.NewRequest(strings.ToUpper(method), requestUrl, reqBody)
+	if err != nil {
+		logger.Printf("NewRequest Error: %v", err)
+		return 0, "", err
+	}
+
+	// 设置请求头
+	for key, value := range requestHeader {
+		// req.Header.Set(key, value)
+		req.Header[key] = []string{value} // 直接赋值，避免 net/http 规范化
+	}
+
+	// 发送请求
+	resp, err := client.Do(req)
+	if err != nil {
+		return 0, "", err
+	}
+	defer resp.Body.Close()
+
+	// 读取响应
+	respBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		logger.Printf("io.ReadAll Error: %v", err)
+		return resp.StatusCode, "", err
+	}
+
+	if debugMode {
+		fmt.Println("Request URL:", requestUrl)
+		fmt.Println("Method:", method)
+		fmt.Println("Request Header:", requestHeader)
+		fmt.Println("Request Body:", requestBody)
+		fmt.Println("HTTP Code:", resp.StatusCode)
+		fmt.Println("Response Body:", string(respBody))
+		fmt.Println("------------------------")
+	}
+
+	return resp.StatusCode, string(respBody), nil
+}
+
+// Md5Encrypt 生成字符串的 MD5 值
+func Md5Encrypt(input string) string {
+	hash := md5.New()
+	hash.Write([]byte(input))
+	return hex.EncodeToString(hash.Sum(nil))
+}
+
+// Base64 解码函数
+func DecodeBase64(encoded string) (string, error) {
+	data, err := base64.StdEncoding.DecodeString(encoded)
+	if err != nil {
+		return "", err
+	}
+	return string(data), nil
+}
