@@ -10,6 +10,8 @@ import (
 	"time"
 )
 
+var logger = log.Default()
+
 // 获取本机信息
 func GetIPInfo() (string, string, string) {
 	// 发起请求
